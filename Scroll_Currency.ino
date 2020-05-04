@@ -40,8 +40,14 @@ const int csPin = D8;			// CS pin used to connect FC16
 const int displayCount = 8;		// Number of displays; usually 4 or 8
 const int scrollDelay = 35;		// Scrolling speed - pause in ms
 
+
+
+
+
+
+
 FC16 display = FC16(csPin, displayCount);
-DynamicJsonBuffer jsonBuffer;
+//DynamicJsonBuffer jsonBuffer;
 WiFiClient client;
 HTTPClient http;
 
@@ -72,6 +78,23 @@ void RequestHTTP(){
         if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
            payload = http.getString();
            Serial.println(payload);
+           DynamicJsonDocument doc(4096);
+           deserializeJson(doc, payload);
+           JsonObject obj = doc.as<JsonObject>();
+           long timestamp = obj[String("timestamp")];
+           String date= obj[String("date")];
+           String rates= obj[String("rates")];
+           float CAD = obj[String("rates")][String("CAD")];
+           float USD = obj[String("rates")][String("USD")];
+           float CNY = obj[String("rates")][String("CNY")];
+           Serial.print("Timestamp:");Serial.println(timestamp);
+           Serial.print("rates:");Serial.println(rates);
+           Serial.print("CAD:");Serial.println(CAD);
+           Serial.print("USD:");Serial.println(USD);
+           Serial.print("CNY:");Serial.println(CNY);
+           sprintf(Texte,"\x10   %02i/%02i/%04i   %02i:%02i  - Dollar US : %.3f - Dollar CAD : %.3f - Yuan CNY : %.3f  \x11     \x01     \x03    \x01",day(timestamp),month(timestamp),year(timestamp),hour(timestamp)+2, minute(timestamp),USD,CAD,CNY);
+           Serial.print("text:");Serial.println(Texte);
+           display.setText(Texte);           
           }
       } else {
         Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
@@ -80,19 +103,7 @@ void RequestHTTP(){
     } else {
       Serial.printf("[HTTP} Unable to connect\n");
    }
-  JsonObject& root = jsonBuffer.parseObject(payload);
-  long timestamp = root[String("timestamp")];
-  String date = root["date"].as<String>();
-  String rates =  root["rates"].as<String>();
-  JsonObject& root1 = jsonBuffer.parseObject(rates);
-  float CAD=root1["CAD"].as<float>();
-  float USD=root1["USD"].as<float>();
-  float CNY=root1["CNY"].as<float>();
-  Serial.print("CAD:");Serial.println(CAD);
-  Serial.print("USD:");Serial.println(USD);
-  sprintf(Texte,"\x10   %02i/%02i/%04i   %02i:%02i  - Dollar US : %.3f - Dollar CAD : %.3f - Yuan CNY : %.3f  \x11     \x01     \x03    \x01",day(timestamp),month(timestamp),year(timestamp),hour(timestamp)+2, minute(timestamp),USD,CAD,CNY);
-  Serial.print("text:");Serial.println(Texte);
-  display.setText(Texte);
+ 
 }
 // ===============================================================================================================================================
 //                                                                   SETUP
