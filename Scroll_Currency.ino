@@ -21,24 +21,28 @@
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include <TimeLib.h>
+#include <NTPClient.h>                                                // Library for NTP Time (https://github.com/arduino-libraries/NTPClient)
+#include <WiFiUdp.h>                                                  // Need for NTP
 // ===============================================================================================================================================
 //                                                                   DEFINE
 // ===============================================================================================================================================
-#define Version  "1.0a"
+#define Version  "1.0c"
 // ===============================================================================================================================================
 //                                                                   VARIABLE
 // ===============================================================================================================================================
 unsigned long previousMillis = 1600000 ;
 unsigned long interval = 1800000L;                                     
 const char *host ="data.fixer.io";
-String url = "/api/latest?access_key=xxx";  
+String url = "/api/latest?access_key=xx";  
 String payload;
 const char* ssid     = "Freebox-60D420";
-const char* password = "xxx";
+const char* password = "xx";
 char Texte[100] = " \x11     \x01     \x03 ";
 const int csPin = D8;			// CS pin used to connect FC16
 const int displayCount = 8;		// Number of displays; usually 4 or 8
 const int scrollDelay = 35;		// Scrolling speed - pause in ms
+WiFiUDP ntpUDP;                                                       // Need for NTPClient
+NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 7200, 60000);     // NTP Object set the Offset (summer:7200/winter:3600)
 
 
 
@@ -124,14 +128,18 @@ void setup() {
 	display.setIntensity(2);	// set medium brightness
 	display.clearDisplay();		// turn all LED off
   display.setText(Texte);
+  timeClient.begin();                                                // Start NTP
 }
 // ===============================================================================================================================================
 //                                                                   LOOP
 // ===============================================================================================================================================
 void loop() {
 
-  if ( millis() - previousMillis >= interval) {                    
-    RequestHTTP();
+  if ( millis() - previousMillis >= interval) {    
+    if ( timeClient.update() == true) {  
+          Serial.println(timeClient.getFormattedTime());
+          if (timeClient.getHours()<21 && timeClient.getHours()>6) { RequestHTTP(); } // request if heour <21 anf hour >6
+    }
     previousMillis = millis(); 
   }
 	display.update();
